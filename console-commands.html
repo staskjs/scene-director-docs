@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Scene Director Console Commands — Scene Director</title>
+  <meta name="description" content="Create complex NPC routines, interactions, and gameplay sequences without timelines. Fully event-driven, node-based, and easily extensible.">
+  <link rel="stylesheet" href="assets/docs.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="site-header__inner">
+      <img class="site-header__icon" src="assets/images/ActionGraph.svg" alt="" width="40" height="40">
+      <div class="site-header__brand">
+        <h1 class="site-header__title"><a href="index.html">Scene Director</a></h1>
+        <p class="site-header__tagline">Create complex NPC routines, interactions, and gameplay sequences without timelines. Fully event-driven, node-based, and easily extensible.</p>
+      </div>
+    </div>
+  </header>
+  <div class="layout">
+    <nav class="sidebar" aria-label="Documentation sections">
+      <div class="sidebar__group"><p class="sidebar__label">Basics</p><ul><li><a href="overview.html">Overview</a></li><li><a href="index.html">Getting started</a></li><li><a href="built-in-nodes.html">Built-in nodes</a></li><li><a href="world-helpers.html">World helpers</a></li><li><a href="faq.html">FAQ</a></li></ul></div><div class="sidebar__group sidebar__group--spaced"><p class="sidebar__label">Features</p><ul><li><a href="graph-toolkit.html">Graph toolkit</a></li><li><a href="runtime-control.html">Runtime control</a></li><li><a href="state-persistence.html">Save &amp; restore</a></li><li><a class="is-active" href="console-commands.html">Console &amp; debug</a></li></ul></div><div class="sidebar__group sidebar__group--spaced"><p class="sidebar__label">Advanced</p><ul><li><a href="custom-nodes.html">Custom nodes</a></li><li><a href="participant-resolver.html">Participant resolver</a></li></ul></div>
+    </nav>
+    <main class="content">
+      <article class="prose">
+        <h1 id="scene-director-console-commands">Scene Director Console Commands</h1>
+<p>This file lists all console commands registered by the Scene Director plugin.</p>
+<h2 id="1-runscenedirector">1) <code class="hl-inline">RunSceneDirector</code></h2>
+<p>Runs an Action Graph by partial name (for the sake of simplicity).</p>
+<p>Syntax:</p>
+<ul><li><code class="hl-inline">RunSceneDirector &lt;NamePart&gt;</code></li><li><code class="hl-inline">RunSceneDirector &lt;NamePart1&gt; &lt;NamePart2&gt; ...</code></li></ul>
+<p>Example:</p>
+<ul><li><code class="hl-inline">RunSceneDirector Intro</code></li></ul>
+<hr>
+<h2 id="2-scenedirectordebug">2) <code class="hl-inline">scenedirector.debug</code></h2>
+<p>Toggles overview HUD for active graphs and average task tick time.</p>
+<p>Syntax:</p>
+<ul><li><code class="hl-inline">scenedirector.debug</code> (toggle)</li><li><code class="hl-inline">scenedirector.debug <span class="hl-number">1</span></code></li><li><code class="hl-inline">scenedirector.debug <span class="hl-number">0</span></code></li></ul>
+<p>What it shows:</p>
+<ul><li>number of active graphs;</li><li>number of active tasks;</li><li>number of unique participants;</li><li><code class="hl-inline">Task tick average</code> table by task class.</li></ul>
+<hr>
+<h2 id="3-scenedirectordebugnode">3) <code class="hl-inline">scenedirector.debugnode</code></h2>
+<p>Draws 3D text above participants with currently active Scene Director tasks.</p>
+<p>Syntax:</p>
+<ul><li><code class="hl-inline">scenedirector.debugnode</code> (enable for all)</li><li><code class="hl-inline">scenedirector.debugnode <span class="hl-number">0</span></code></li><li><code class="hl-inline">scenedirector.debugnode &lt;Tag1&gt; &lt;Tag2&gt; ...</code> (enable with tag filter)</li></ul>
+<p>Examples:</p>
+<ul><li><code class="hl-inline">scenedirector.debugnode</code></li><li><code class="hl-inline">scenedirector.debugnode NPC_A</code></li></ul>
+<p>Limitations:</p>
+<ul><li>drawing happens in game viewport (PIE/Play);</li><li>no drawing on dedicated server;</li><li>if there are no active tasks, labels will not appear.</li></ul>
+<hr>
+<h2 id="4-scenedirectordebugnodecleartags">4) <code class="hl-inline">scenedirector.debugnode.cleartags</code></h2>
+<p>Clears tag filter for <code class="hl-inline">scenedirector.debugnode</code>.</p>
+<p>Syntax:</p>
+<ul><li><code class="hl-inline">scenedirector.debugnode.cleartags</code></li></ul>
+<p>After execution:</p>
+<ul><li>tag-based filtering is disabled;</li><li>all participants are shown again (if <code class="hl-inline">scenedirector.debugnode</code> is enabled).</li></ul>
+<hr>
+<h2 id="5-graph-trace-editor-ui">5) Graph Trace (Editor UI)</h2>
+<p>Use it when you want to understand how the graph is running at runtime: which nodes were activated, what path was taken, and where execution stopped or failed.</p>
+<p>Graph Trace is shown directly in the Action Graph editor.</p>
+<ul><li>Open the graph asset.</li><li>Turn on <strong>Toggle Graph Trace</strong> in the toolbar, or press <code class="hl-inline">T</code>.</li><li>Watch runtime events in the <strong>Trace</strong> tab.</li><li>Trace data is temporary and is cleared after editor restart.</li></ul>
+<p>Trace includes node activations, route hops (including portals), task failures, abort/finish lifecycle events, and <strong>state restore</strong> after load.</p>
+      </article>
+    </main>
+  </div>
+</body>
+</html>
