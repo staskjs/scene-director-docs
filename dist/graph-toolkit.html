@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Action Graph Toolkit — Scene Director</title>
+  <meta name="description" content="Create complex NPC routines, interactions, and gameplay sequences without timelines. Fully event-driven, node-based, and easily extensible.">
+  <link rel="stylesheet" href="assets/docs.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="site-header__inner">
+      <img class="site-header__icon" src="assets/images/ActionGraph.svg" alt="" width="40" height="40">
+      <div class="site-header__brand">
+        <h1 class="site-header__title"><a href="index.html">Scene Director</a></h1>
+        <p class="site-header__tagline">Create complex NPC routines, interactions, and gameplay sequences without timelines. Fully event-driven, node-based, and easily extensible.</p>
+      </div>
+    </div>
+  </header>
+  <div class="layout">
+    <nav class="sidebar" aria-label="Documentation sections">
+      <div class="sidebar__group"><p class="sidebar__label">Basics</p><ul><li><a href="overview.html">Overview</a></li><li><a href="index.html">Getting started</a></li><li><a href="built-in-nodes.html">Built-in nodes</a></li><li><a href="world-helpers.html">World helpers</a></li><li><a href="faq.html">FAQ</a></li></ul></div><div class="sidebar__group sidebar__group--spaced"><p class="sidebar__label">Features</p><ul><li><a class="is-active" href="graph-toolkit.html">Graph toolkit</a></li><li><a href="runtime-control.html">Runtime control</a></li><li><a href="state-persistence.html">Save &amp; restore</a></li><li><a href="console-commands.html">Console &amp; debug</a></li></ul></div><div class="sidebar__group sidebar__group--spaced"><p class="sidebar__label">Advanced</p><ul><li><a href="custom-nodes.html">Custom nodes</a></li><li><a href="participant-resolver.html">Participant resolver</a></li></ul></div>
+    </nav>
+    <main class="content">
+      <article class="prose">
+        <h1 id="action-graph-toolkit">Action Graph Toolkit</h1>
+<p>A small set of building blocks that keeps Action Graphs readable as they grow:</p>
+<ol><li><a href="#macros">Macros</a> — reusable chains inside one graph.</li></ol>
+<ol start="2"><li><a href="#portals">Portals</a> — wireless exec links inside one graph.</li></ol>
+<ol start="3"><li><a href="#nested-graphs">Nested graphs</a> — a whole external graph used as one child step.</li></ol>
+<ol start="4"><li><a href="#graph-input-parameters">Graph input parameters</a> — values passed into a graph at launch.</li></ol>
+<ol start="5"><li><a href="#flow-nodes">Flow nodes</a> — branch, wait, random, loops, and routing helpers.</li></ol>
+<ol start="6"><li><a href="#graceful-pause">Graceful pause</a> — soft suspend at safe boundaries.</li></ol>
+<ol start="7"><li><a href="#abort">Abort</a> — immediate hard stop.</li></ol>
+<ol start="8"><li><a href="#stop-other-graphs">Stop Other Graphs</a> — cancel other runs on the same actor.</li></ol>
+<ol start="9"><li><a href="#on-restored">On Restored</a> — one-shot hook after state restore.</li></ol>
+<ol start="10"><li><a href="#disable-selected-nodes">Disable node</a> — fast iteration toggle.</li></ol>
+<h2 id="macros">Macros</h2>
+<p>A macro is a local function for an Action Graph: a reusable chain of nodes that lives only inside this specific graph. Use macros to break long, intertwined sequences into short named chains.</p>
+<p><img src="assets/images/macro-09.png" alt=""></p>
+<p><img src="assets/images/macro-08.png" alt=""></p>
+<ul><li><code class="hl-inline">Macro Call</code> enters the matching <code class="hl-inline">Macro Input</code> branch and returns through the matching <code class="hl-inline">Macro Output</code>.</li></ul>
+<ul><li>Matching is by ids: same <code class="hl-inline">Macro Id</code>, plus matching <code class="hl-inline">Entry Id</code> / <code class="hl-inline">Exit Id</code>.</li></ul>
+<h2 id="portals">Portals</h2>
+<p>Portals are named wireless exec links inside a single Action Graph: trigger <code class="hl-inline">Portal In</code> and every <code class="hl-inline">Portal Out</code> with the same name fires in parallel. Unlike <a href="#macros">macros</a>, a portal does not return — it just dispatches flow. Use portals to avoid long exec wires across the canvas and to fan one signal out to several branches at once.</p>
+<p><img src="assets/images/portal-11.png" alt=""></p>
+<p><img src="assets/images/portal-12.png" alt=""></p>
+<ul><li>Names must match exactly.</li></ul>
+<h2 id="nested-graphs">Nested graphs</h2>
+<p>A nested graph is a separate Action Graph asset that you launch from a parent graph as a single child step. Unlike <a href="#macros">macros</a>, which live inside one graph, a nested graph is an external asset, so the same logic can be reused across many parent graphs.</p>
+<p><code class="hl-inline">Run Action Graph</code> supports two launch styles:</p>
+<ul><li><strong>Nested / blocking</strong> (<code class="hl-inline">Wait For Completion = <span class="hl-keyword">true</span></code>)  </li></ul>
+<p>The parent waits until the child ends, then continues through <code class="hl-inline">Completed</code>, <code class="hl-inline">Failed</code>, or <code class="hl-inline">Aborted</code>.</p>
+<ul><li><strong>Independent / fire-and-forget</strong> (<code class="hl-inline">Wait For Completion = <span class="hl-keyword">false</span></code>)  </li></ul>
+<p>The child graph starts as a separate run, and the parent node immediately continues through <code class="hl-inline">Completed</code>.</p>
+<p>So the same node can be used either as a true nested step or as a convenient way to start another graph without blocking the current one.</p>
+<p><img src="assets/images/nested-15.png" alt=""></p>
+<p><img src="assets/images/nested-16.png" alt=""></p>
+<ul><li><code class="hl-inline">Run Action Graph</code> (in parent) always exposes <code class="hl-inline">Completed</code> / <code class="hl-inline">Failed</code> / <code class="hl-inline">Aborted</code> outputs.</li></ul>
+<ul><li>With <code class="hl-inline">Wait For Completion</code> enabled, those outputs mean &quot;child graph finished&quot;.</li></ul>
+<ul><li>With <code class="hl-inline">Wait For Completion</code> disabled, <code class="hl-inline">Completed</code> means &quot;child graph was launched successfully&quot;.</li></ul>
+<p><img src="assets/images/nested-17.png" alt=""></p>
+<ul><li><code class="hl-inline">Nested Input</code> (in child) creates extra entry points; each one shows up as an additional input pin on the parent&#x27;s <code class="hl-inline">Run Action Graph</code> node.</li></ul>
+<p><img src="assets/images/nested-18.png" alt=""></p>
+<ul><li><code class="hl-inline">Nested Output</code> (in child) creates extra named output pins on the parent side. They can fire alongside the run, in parallel with terminal outputs.</li></ul>
+<p><img src="assets/images/nested-19.png" alt=""></p>
+<h3 id="end-nested-graph">End Nested Graph</h3>
+<p>Use <strong><code class="hl-inline">End Nested Graph</code></strong> inside a child graph to talk back to the parent&#x27;s <code class="hl-inline">Run Action Graph</code> node.</p>
+<ul><li><strong><code class="hl-inline">Completed</code></strong>, <strong><code class="hl-inline">Failed</code></strong>, or <strong><code class="hl-inline">Aborted</code></strong> — ends the child run and finishes the parent node on that pin.</li></ul>
+<ul><li>Any <strong>custom output id</strong> — fires a matching pin on the parent <strong>without</strong> stopping the child. The nested run keeps going.</li></ul>
+<p>This is how <strong><code class="hl-inline">Nested Output</code></strong> nodes connect to parent-side pins at runtime.</p>
+<h3 id="participant-context-passed-to-the-child">Participant context passed to the child</h3>
+<p>Child graphs are not limited to single-participant mode.</p>
+<ul><li>If the child graph uses <strong>Single Runtime Participant</strong>, the parent passes its current participant actor down to the child.</li></ul>
+<ul><li>If the child graph uses normal <strong>participant slots</strong>, Scene Director tries to resolve those participant ids from the parent graph&#x27;s current participant context and passes the matching actors into the child run.</li></ul>
+<p>This is useful for reusable child graphs like:</p>
+<ul><li>a two-NPC exchange,</li></ul>
+<ul><li>a guard + target interaction,</li></ul>
+<ul><li>a shared &quot;escort pair&quot; or &quot;conversation pair&quot; module.</li></ul>
+<p>In short: the child graph can run with one actor or with several actors, depending on how that child graph is authored.</p>
+<h3 id="nested-launch-vs-root-launch">Nested launch vs root launch</h3>
+<p>Child graphs started by <strong><code class="hl-inline">Run Action Graph</code></strong>:</p>
+<ul><li>do <strong>not</strong> apply root-graph <strong>priority</strong> rules</li></ul>
+<ul><li>do <strong>not</strong> restore from persisted state (<code class="hl-inline">Restore From State</code> is off for nested launches)</li></ul>
+<p>Persistence and priority apply only to top-level <strong><code class="hl-inline">Run Scene Director</code></strong> calls. See <a href="runtime-control.html">Runtime Control</a>.</p>
+<h2 id="graph-input-parameters">Graph input parameters</h2>
+<p>Input parameters are values declared on a graph asset and supplied when the graph starts (mood, speed, target id, etc.). They work both for top-level launches via <code class="hl-inline">Run Scene Director</code> (see <a href="index.html#start-a-graph">Basic Usage</a>) and for nested calls — <code class="hl-inline">Run Action Graph</code> exposes a pin per declared input.</p>
+<p><img src="assets/images/04.png" alt=""></p>
+<p>Inside the graph, read a value with <code class="hl-inline">Get Parameter</code>: pick a <code class="hl-inline">Parameter Id</code> from the declared inputs and connect the result to a task pin of the matching type.</p>
+<p><img src="assets/images/parameter-20.png" alt=""></p>
+<ul><li>Values are passed by id; ids must match between the graph declaration, <code class="hl-inline">Get Parameter</code> and <code class="hl-inline">Make Scene Director Parameter</code>.</li></ul>
+<ul><li>Unknown ids and type-mismatched values are ignored at launch.</li></ul>
+<h2 id="flow-nodes">Flow nodes</h2>
+<p>Common built-in nodes for branching, timing, and routing. Most do not require a participant.</p>
+<h3 id="branch">Branch</h3>
+<ul><li>Reads a bool and immediately routes to <strong><code class="hl-inline">True</code></strong> or <strong><code class="hl-inline">False</code></strong>.</li></ul>
+<h3 id="wait-seconds">Wait (Seconds)</h3>
+<ul><li>Delays for the given time, then completes.</li></ul>
+<h3 id="random">Random</h3>
+<p>Picks one weighted output on each activation.</p>
+<ul><li>Outputs are named <strong><code class="hl-inline">Option_1</code></strong>, <strong><code class="hl-inline">Option_2</code></strong>, … — one per weight in the array.</li></ul>
+<ul><li><strong><code class="hl-inline">Without Replacement</code></strong> (default) — no option repeats until all options have been used once.</li></ul>
+<ul><li><strong><code class="hl-inline">With Replacement</code></strong> — every pick is independent; repeats are allowed.</li></ul>
+<ul><li><strong><code class="hl-inline">Prebake Random Sequence</code></strong> (default) — precomputes the pick order and persists it through <strong><code class="hl-inline">SaveGame</code></strong>. Interrupted runs continue from the same pending option. Works with <a href="state-persistence.html">State Persistence</a>.</li></ul>
+<h3 id="gate">Gate</h3>
+<p>Like a Blueprint Gate: <strong><code class="hl-inline">In</code></strong> passes through to <strong><code class="hl-inline">Completed</code></strong> only when the gate is open.</p>
+<ul><li><strong><code class="hl-inline">Open</code></strong> / <strong><code class="hl-inline">Close</code></strong> input pins change gate state.</li></ul>
+<ul><li><strong><code class="hl-inline">Start Closed</code></strong> — initial state when the run begins.</li></ul>
+<ul><li>Open/closed state can persist through save/load when persistence is enabled.</li></ul>
+<h3 id="sequence">Sequence</h3>
+<p>On each <strong><code class="hl-inline">In</code></strong> pulse, fires the next numbered output in order (<code class="hl-inline"><span class="hl-number">1</span></code>, <code class="hl-inline"><span class="hl-number">2</span></code>, …), then wraps back to <code class="hl-inline"><span class="hl-number">1</span></code>.</p>
+<p>Good for cycling through a fixed ordered list of branches.</p>
+<h3 id="for-each-count">For Each (Count)</h3>
+<p>Counter-style loop.</p>
+<ul><li>Runs the body at most <strong><code class="hl-inline">Count</code></strong> times.</li></ul>
+<ul><li>Each iteration needs a new pulse on <strong><code class="hl-inline">In</code></strong> after the previous branch finishes (wire the body back to this node).</li></ul>
+<ul><li><strong><code class="hl-inline">Loop</code></strong> fires on every step including the last.</li></ul>
+<ul><li><strong><code class="hl-inline">All Done</code></strong> fires on the <strong>next</strong> <code class="hl-inline">In</code> after the last loop, then the counter resets.</li></ul>
+<ul><li>If <strong><code class="hl-inline">Count</code></strong> is <code class="hl-inline"><span class="hl-number">0</span></code>, only <strong><code class="hl-inline">All Done</code></strong> fires on the first <code class="hl-inline">In</code>.</li></ul>
+<ul><li>Current iteration persists through save/load when persistence is enabled.</li></ul>
+<h3 id="pass-through">Pass Through</h3>
+<p>Instant <strong><code class="hl-inline">In</code> → <code class="hl-inline">Completed</code></strong> connector. Use to merge or reroute exec lines without adding logic.</p>
+<h3 id="log">Log</h3>
+<p>Prints a message to the log/output for debugging graph flow.</p>
+<h3 id="follow-player-follow-actor">Follow Player / Follow Actor</h3>
+<p>Long-running movement tasks. The participant pathfinds toward a moving target.</p>
+<p>Extra input pins:</p>
+<ul><li><strong><code class="hl-inline">Pause</code></strong> — pause movement</li></ul>
+<ul><li><strong><code class="hl-inline">Stop</code></strong> — end the task</li></ul>
+<ul><li><strong><code class="hl-inline">Resume</code></strong> — continue after pause</li></ul>
+<p>Output pins:</p>
+<ul><li><strong><code class="hl-inline">Completed</code></strong> — target reached or movement finished normally</li></ul>
+<ul><li><strong><code class="hl-inline">Failed</code></strong> — movement could not complete (pathing failure, lost target, etc.)</li></ul>
+<p><strong>Follow Actor</strong> additionally resolves the target by actor tag.</p>
+<h2 id="graceful-pause">Graceful pause</h2>
+<p>Use this family to softly suspend graph flow at safe boundaries instead of hard-aborting it. Typical pattern: while the player stays near the NPC, a loop keeps cycling through a portal; once the player walks away, <code class="hl-inline">Pause Gracefully</code> is requested, and the next time flow reaches the loop boundary the NPC stops cleanly without finishing the current iteration. When the player returns, <code class="hl-inline">Cancel Pause Gracefully</code> clears the request and the loop resumes from the same boundary.</p>
+<p><img src="assets/images/pause-13.png" alt=""></p>
+<ul><li><code class="hl-inline">Pause Gracefully</code> requests pause mode on the current running graph.</li></ul>
+<ul><li><code class="hl-inline">On Pause Gracefully</code> fires once when pause mode is requested.</li></ul>
+<ul><li><code class="hl-inline">Is Pause Gracefully</code> branches by current pause-request state.</li></ul>
+<ul><li><code class="hl-inline">Cancel Pause Gracefully</code> clears a previously requested pause mode.</li></ul>
+<p>If the same graph is launched again while pause is requested, the new launch <strong>cancels the pause</strong> and resumes the existing run instead of starting a duplicate. See <a href="runtime-control.html#starting-the-same-graph-again">Runtime Control</a>.</p>
+<h2 id="abort">Abort</h2>
+<p>Abort is the hard-stop counterpart to <a href="#graceful-pause">graceful pause</a>: it terminates the active Scene Director run immediately, without waiting for nodes to reach a safe boundary. Use it for emergency exits — failure conditions, scene cancellations, or any moment when the flow must end right now.</p>
+<p><img src="assets/images/abort-14.png" alt=""></p>
+<ul><li><code class="hl-inline">Abort</code> immediately stops the active Scene Director run.</li></ul>
+<ul><li><strong><code class="hl-inline">Clear Persisted State</code></strong> (optional) — also delete this run&#x27;s in-memory persistence snapshot.</li></ul>
+<ul><li><code class="hl-inline">On Abort</code> fires when an abort is triggered, giving nodes one chance to clean up runtime state (cancel timers, release locks, restore world state, etc.).</li></ul>
+<h2 id="stop-other-graphs">Stop Other Graphs</h2>
+<p>Stops every <strong>other</strong> active Scene Director run that uses the <strong>same Single Runtime Participant actor</strong> as this node.</p>
+<ul><li>The <strong>current run is not stopped</strong>.</li></ul>
+<ul><li>Optional <strong><code class="hl-inline">Clear Persisted State</code></strong> — also clear snapshots for each stopped run.</li></ul>
+<p>Typical use: an NPC starts a new personal behavior graph and should cancel older graphs still running on that same character.</p>
+<p>For subsystem-level stop calls, see <a href="runtime-control.html">Runtime Control</a>.</p>
+<h2 id="on-restored">On Restored</h2>
+<p>Fires once when the graph run starts from a <strong>restored persistence snapshot</strong>.</p>
+<ul><li>Does not fire on a normal fresh launch.</li></ul>
+<ul><li>Useful for post-load setup that should run only after resume.</li></ul>
+<p>Details: <a href="state-persistence.html#on-restored">State Persistence — On Restored</a>.</p>
+<h2 id="disable-selected-nodes">Disable selected nodes</h2>
+<p>Use node disabling as a fast iteration tool when tuning graph flow. A disabled node skips task execution and auto-routes immediately.</p>
+<p><img src="assets/images/disabled-17.png" alt=""></p>
+<ul><li>Hotkey: <code class="hl-inline">E</code> toggles <code class="hl-inline">Disabled</code> for selected action node(s).</li></ul>
+<ul><li>Routing preference: <code class="hl-inline">Completed</code> if present, otherwise the first declared output (for example <code class="hl-inline">Branch</code>: <code class="hl-inline">True / False</code>).</li></ul>
+<h2 id="see-also">See also</h2>
+<ul><li><a href="world-helpers.html#related-task-nodes">World Helpers — related task nodes</a> — anchors, routes, teleport.</li><li><a href="console-commands.html#5-graph-trace-editor-ui">Console Commands — Graph Trace</a></li></ul>
+      </article>
+    </main>
+  </div>
+</body>
+</html>

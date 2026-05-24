@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Runtime Control — Scene Director</title>
+  <meta name="description" content="Create complex NPC routines, interactions, and gameplay sequences without timelines. Fully event-driven, node-based, and easily extensible.">
+  <link rel="stylesheet" href="assets/docs.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="site-header__inner">
+      <img class="site-header__icon" src="assets/images/ActionGraph.svg" alt="" width="40" height="40">
+      <div class="site-header__brand">
+        <h1 class="site-header__title"><a href="index.html">Scene Director</a></h1>
+        <p class="site-header__tagline">Create complex NPC routines, interactions, and gameplay sequences without timelines. Fully event-driven, node-based, and easily extensible.</p>
+      </div>
+    </div>
+  </header>
+  <div class="layout">
+    <nav class="sidebar" aria-label="Documentation sections">
+      <div class="sidebar__group"><p class="sidebar__label">Basics</p><ul><li><a href="overview.html">Overview</a></li><li><a href="index.html">Getting started</a></li><li><a href="built-in-nodes.html">Built-in nodes</a></li><li><a href="world-helpers.html">World helpers</a></li><li><a href="faq.html">FAQ</a></li></ul></div><div class="sidebar__group sidebar__group--spaced"><p class="sidebar__label">Features</p><ul><li><a href="graph-toolkit.html">Graph toolkit</a></li><li><a class="is-active" href="runtime-control.html">Runtime control</a></li><li><a href="state-persistence.html">Save &amp; restore</a></li><li><a href="console-commands.html">Console &amp; debug</a></li></ul></div><div class="sidebar__group sidebar__group--spaced"><p class="sidebar__label">Advanced</p><ul><li><a href="custom-nodes.html">Custom nodes</a></li><li><a href="participant-resolver.html">Participant resolver</a></li></ul></div>
+    </nav>
+    <main class="content">
+      <article class="prose">
+        <h1 id="runtime-control">Runtime Control</h1>
+<p>This guide covers how to stop graphs, check whether an actor is busy, and what happens when you try to start the same graph again.</p>
+<p>For launch basics, see <a href="index.html">Basic Usage</a>. For persistence details, see <a href="state-persistence.html">State Persistence</a>.</p>
+<h2 id="stop-a-running-graph">Stop a running graph</h2>
+<p>Most stop functions live on <strong>Scene Director Subsystem</strong>.</p>
+<p>All of them accept an optional <strong><code class="hl-inline">Clear Persisted State</code></strong> flag (advanced). When enabled, stopped runs also delete their in-memory persistence snapshot for that graph.</p>
+<h3 id="stop-everything">Stop everything</h3>
+<ul><li><code class="hl-inline">StopAllSceneDirectors(Clear Persisted State)</code> — stops all active runs in this world. Call on <strong>Scene Director Subsystem</strong> (use <strong>Get Scene Director Subsystem</strong> when you only have a world context).</li></ul>
+<h3 id="stop-by-actor">Stop by actor</h3>
+<p>Use these when the graph runs in <strong>Single Runtime Participant</strong> mode and you know which actor should stop.</p>
+<ul><li><code class="hl-inline">StopSceneDirectorsForActor(Actor, Clear Persisted State)</code> — stops every active run bound to that actor.</li><li><code class="hl-inline">StopSceneDirectorsForActorByClass(Actor, Graph Class, Clear Persisted State)</code> — same, but only for one graph class.</li></ul>
+<p>Typical use: the player leaves an area and you want to cancel that NPC&#x27;s personal behavior graph.</p>
+<h3 id="stop-by-graph-class">Stop by graph class</h3>
+<ul><li><code class="hl-inline">StopSceneDirectorsByClass(Graph Class, Clear Persisted State)</code> — stops all active instances of one Action Graph, no matter which actors they use.</li></ul>
+<h3 id="stop-from-inside-a-graph">Stop from inside a graph</h3>
+<ul><li><strong><code class="hl-inline">Stop Other Graphs</code></strong> — stops every other active run that shares the same single-runtime participant as this node. The current run keeps going. See <a href="graph-toolkit.html#stop-other-graphs">Action Graph Toolkit</a>.</li><li><strong><code class="hl-inline">Abort</code></strong> — hard-stops the current run. See <a href="graph-toolkit.html#abort">Abort</a>.</li></ul>
+<hr>
+<h2 id="check-whether-an-actor-is-busy">Check whether an actor is busy</h2>
+<ul><li><code class="hl-inline">IsActorInRunningScene(Actor)</code> returns <code class="hl-inline"><span class="hl-keyword">true</span></code> when the actor is a bound participant in any <strong>currently running</strong> Scene Director instance, including nested child graphs.</li></ul>
+<p>Useful before starting a new AI state, opening a dialog, or launching another graph on the same character.</p>
+<hr>
+<h2 id="starting-the-same-graph-again">Starting the same graph again</h2>
+<p>Behavior depends on graph mode.</p>
+<h3 id="normal-participant-slot-graphs">Normal participant-slot graphs</h3>
+<p>If the same graph class is <strong>already running</strong>, a second <code class="hl-inline">Run Scene Director</code> call is <strong>ignored</strong> and returns <code class="hl-inline"><span class="hl-keyword">false</span></code>.</p>
+<p>Exception: if that run is in <strong>Pause Gracefully</strong> mode, a new launch <strong>cancels the pause request</strong> and returns the existing instance instead of starting a duplicate.</p>
+<h3 id="single-runtime-participant-graphs">Single Runtime Participant graphs</h3>
+<p>Parallel runs of the <strong>same graph class</strong> are allowed when each run uses a <strong>different actor</strong>.</p>
+<p>Example: ten NPCs can all run the same &quot;Idle Behavior&quot; graph at once — one instance per actor.</p>
+<hr>
+<h2 id="priority-conflicts-between-root-graphs">Priority conflicts between root graphs</h2>
+<p>Many root Scene Director graphs can run <strong>at the same time</strong>. Priority is checked <strong>only when the new launch shares at least one participant actor</strong> with an already running root graph.</p>
+<p>Examples:</p>
+<ul><li>A shop scene on <code class="hl-inline">ShopKeeper</code> and a patrol scene on <code class="hl-inline">GuardA</code> can run in parallel — no shared actors, no conflict.</li><li>A new cutscene and an idle loop both bound to the same NPC <strong>do</strong> conflict — Scene Director compares <strong>Priority</strong> on the graph assets.</li></ul>
+<p>When there is a shared participant actor:</p>
+<ul><li>Higher priority wins and can stop lower-priority conflicting runs.</li><li>If priorities are equal, the result depends on <strong>Project Settings → Plugins → Scene Director → Priority Conflict Policy</strong>:</li></ul>
+<p>- <strong>Incoming Wins On Equal</strong> (default) — the new graph stops the active one. - <strong>Active Wins On Equal</strong> — the new launch is rejected.</p>
+<p>If the winning graph has <strong>Clear Preempted Graph State</strong> enabled, stopped lower-priority runs also lose their persisted in-memory snapshot.</p>
+<p>Notes:</p>
+<ul><li>Priority applies to <strong>root</strong> launches through <code class="hl-inline">Run Scene Director</code>.</li><li>Child graphs started by <strong><code class="hl-inline">Run Action Graph</code></strong> do not participate in this priority logic.</li></ul>
+<p>See also <a href="index.html#graph-settings">Graph settings</a>.</p>
+<hr>
+<h2 id="restore-flag-on-launch">Restore flag on launch</h2>
+<p>Both launch functions accept <strong><code class="hl-inline">Restore From State</code></strong> (advanced, default <code class="hl-inline"><span class="hl-keyword">true</span></code>):</p>
+<ul><li><code class="hl-inline">Run Scene Director(..., Restore From State)</code></li><li><code class="hl-inline">Run Scene Director With Single Actor(..., Restore From State)</code></li></ul>
+<p>When <code class="hl-inline"><span class="hl-keyword">true</span></code> and persistence is enabled on the graph, Scene Director tries to resume from the in-memory snapshot before starting fresh.</p>
+<p>Set <code class="hl-inline"><span class="hl-keyword">false</span></code> when you intentionally want a clean run even though old state still exists.</p>
+      </article>
+    </main>
+  </div>
+</body>
+</html>

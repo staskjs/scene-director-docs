@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Scene Director State Persistence — Scene Director</title>
+  <meta name="description" content="Create complex NPC routines, interactions, and gameplay sequences without timelines. Fully event-driven, node-based, and easily extensible.">
+  <link rel="stylesheet" href="assets/docs.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="site-header__inner">
+      <img class="site-header__icon" src="assets/images/ActionGraph.svg" alt="" width="40" height="40">
+      <div class="site-header__brand">
+        <h1 class="site-header__title"><a href="index.html">Scene Director</a></h1>
+        <p class="site-header__tagline">Create complex NPC routines, interactions, and gameplay sequences without timelines. Fully event-driven, node-based, and easily extensible.</p>
+      </div>
+    </div>
+  </header>
+  <div class="layout">
+    <nav class="sidebar" aria-label="Documentation sections">
+      <div class="sidebar__group"><p class="sidebar__label">Basics</p><ul><li><a href="overview.html">Overview</a></li><li><a href="index.html">Getting started</a></li><li><a href="built-in-nodes.html">Built-in nodes</a></li><li><a href="world-helpers.html">World helpers</a></li><li><a href="faq.html">FAQ</a></li></ul></div><div class="sidebar__group sidebar__group--spaced"><p class="sidebar__label">Features</p><ul><li><a href="graph-toolkit.html">Graph toolkit</a></li><li><a href="runtime-control.html">Runtime control</a></li><li><a class="is-active" href="state-persistence.html">Save &amp; restore</a></li><li><a href="console-commands.html">Console &amp; debug</a></li></ul></div><div class="sidebar__group sidebar__group--spaced"><p class="sidebar__label">Advanced</p><ul><li><a href="custom-nodes.html">Custom nodes</a></li><li><a href="participant-resolver.html">Participant resolver</a></li></ul></div>
+    </nav>
+    <main class="content">
+      <article class="prose">
+        <h1 id="scene-director-state-persistence">Scene Director State Persistence</h1>
+<p>State Persistence lets Scene Director remember graph progress.</p>
+<p>Use it when a scene should continue after save/load instead of starting again from the beginning.</p>
+<p>Typical example:</p>
+<ol><li>an NPC scene is already running</li><li>the game is saved</li><li>later the game is loaded</li><li>Scene Director restores the saved progress and continues from that point</li></ol>
+<p>This guide explains:</p>
+<ol><li>what Scene Director actually remembers</li><li>graph asset settings that control capture and restore</li><li>how a graph resumes after load</li><li>how to save that state to a <code class="hl-inline">SaveGame</code> slot or your own save system</li></ol>
+<h2 id="what-is-actually-saved">What is actually saved</h2>
+<blockquote class="footnote"><p>Only graph progress and node fields marked with <code class="hl-inline">SaveGame</code>.</p></blockquote>
+<p>Important:</p>
+<ul><li>enable <strong><code class="hl-inline">State Persistence</code></strong> on the graph asset</li><li>mark custom node fields with <code class="hl-inline">SaveGame</code> if they must survive save/load</li><li>this does not replace your normal game save system</li></ul>
+<p>Built-in nodes that already persist resume-critical data include <strong><code class="hl-inline">Random</code></strong> (prebaked sequence), <strong><code class="hl-inline">Gate</code></strong> (open/closed), and <strong><code class="hl-inline">For Each (Count)</code></strong> (current iteration).</p>
+<h2 id="graph-asset-settings">Graph asset settings</h2>
+<p>When <strong>State Persistence → Enabled</strong> is on, three extra settings appear on the Action Graph asset.</p>
+<h3 id="capture-policy">Capture Policy</h3>
+<p>Controls <strong>when</strong> Scene Director writes a runtime snapshot.</p>
+<ul><li><strong><code class="hl-inline">On Abort</code></strong> (default) — capture only when the run is aborted.</li><li><strong><code class="hl-inline">On Node Transition</code></strong> — capture whenever a task finishes and flow moves on.</li><li><strong><code class="hl-inline">On Node Transition Or Abort</code></strong> — both of the above.</li><li><strong><code class="hl-inline">Never (Do Not Capture State)</code></strong> — do not store node/runtime snapshots.</li></ul>
+<p><code class="hl-inline">Never</code> is useful when you only want the <strong>auto-start</strong> signal (see below) without restoring node-level progress. With <code class="hl-inline">Never</code>, the graph still starts from the beginning after load unless you handle resume yourself.</p>
+<h3 id="completed-policy">Completed Policy</h3>
+<p>Controls what happens to the snapshot after a <strong>normal</strong> graph finish (not abort).</p>
+<ul><li><strong><code class="hl-inline">Clear</code></strong> (default) — delete persisted state when the run completes successfully.</li><li><strong><code class="hl-inline">Keep In Memory</code></strong> — leave the last snapshot in memory. The next launch can restore it if <strong><code class="hl-inline">Restore From State</code></strong> is enabled.</li></ul>
+<h3 id="auto-start-on-state-restore">Auto Start On State Restore</h3>
+<p>When enabled, Scene Director <strong>automatically calls <code class="hl-inline">Run Scene Director</code></strong> after import/load for graphs that were <strong>running at save time</strong>.</p>
+<p>Requirements and limits:</p>
+<ul><li>persistence must be enabled on the graph</li><li><strong>not available</strong> for <strong>Single Runtime Participant</strong> graphs — they need an explicit actor binding at launch</li><li>if <strong>Capture Policy</strong> is <code class="hl-inline">Never</code>, auto-start can still happen, but the graph begins from the start with no node snapshot</li></ul>
+<p>For manual control, leave this off and start graphs yourself with <strong><code class="hl-inline">Restore From State = <span class="hl-keyword">true</span></code></strong>. See <a href="index.html#start-a-graph">Basic Usage</a>.</p>
+<h2 id="on-restored">On Restored</h2>
+<p>Place an <strong><code class="hl-inline">On Restored</code></strong> control node anywhere in the graph.</p>
+<ul><li>It fires once when the run starts <strong>from a restored snapshot</strong> (after load/import or when <code class="hl-inline">Restore From State</code> succeeds).</li><li>Use it for one-time setup that should not repeat on a fresh run — rebind UI, replay a short intro sting, refresh world props, etc.</li></ul>
+<p>It does <strong>not</strong> fire on a normal first launch with no saved state.</p>
+<h2 id="clearing-persisted-state">Clearing persisted state</h2>
+<h3 id="from-graph-nodes">From graph nodes</h3>
+<ul><li><strong><code class="hl-inline">Abort</code></strong> — optional <strong><code class="hl-inline">Clear Persisted State</code></strong>. When enabled, aborting also deletes this run&#x27;s snapshot.</li><li><strong><code class="hl-inline">Stop Other Graphs</code></strong> — same optional flag for every run it stops.</li></ul>
+<h3 id="from-subsystem">From subsystem</h3>
+<ul><li><code class="hl-inline">ClearSceneDirectorStatesForGraph(Graph Class)</code></li><li><code class="hl-inline">ClearAllSceneDirectorStates()</code></li></ul>
+<h3 id="when-stopping-from-code">When stopping from code</h3>
+<p>Most <a href="runtime-control.html#stop-a-running-graph">stop functions</a> accept <strong><code class="hl-inline">Clear Persisted State</code></strong>.</p>
+<h3 id="when-a-higher-priority-graph-preempts-a-lower-one">When a higher-priority graph preempts a lower one</h3>
+<p>If the incoming graph has <strong><code class="hl-inline">Clear Preempted Graph State</code></strong> enabled, stopped conflicting runs also lose their snapshots.</p>
+<h2 id="export-records-and-was-running-at-save">Export records and <code class="hl-inline">Was Running At Save</code></h2>
+<p>When you call <strong><code class="hl-inline">ExportPersistedSceneDirectorStates</code></strong>, each record can include:</p>
+<ul><li><strong><code class="hl-inline">State</code></strong> — node snapshots and task <code class="hl-inline">SaveGame</code> payloads</li><li><strong><code class="hl-inline">Was Running At Save</code></strong> — <code class="hl-inline"><span class="hl-keyword">true</span></code> if that graph had an active running instance at export time</li></ul>
+<p>Import uses <strong><code class="hl-inline">Was Running At Save</code></strong> together with <strong><code class="hl-inline">Auto Start On State Restore</code></strong> to decide which graphs should restart automatically.</p>
+<p>Even when <strong>Capture Policy</strong> is <code class="hl-inline">Never</code>, export can still emit a lightweight record with <strong><code class="hl-inline">Was Running At Save = <span class="hl-keyword">true</span></code></strong> so auto-start knows the graph was active — but without node-level restore data.</p>
+<h2 id="action-node-authoring">Action node authoring</h2>
+<p>If you only use built-in nodes, you can usually skip this section.</p>
+<p>Scene Director gives custom nodes two useful hooks:</p>
+<ul><li><strong><code class="hl-inline">On Before Capture Persistent State</code></strong></li></ul>
+<p>- Called right before state capture. - Use it to copy runtime progress into saved fields.</p>
+<ul><li><strong><code class="hl-inline">On Persistent State Restored</code></strong></li></ul>
+<p>- Called after state restore. - Use it to rebuild anything that should exist again after load.</p>
+<p>In Blueprint, implement these events directly. In C++, override the <code class="hl-inline">_Implementation</code> methods.</p>
+<p>For full authoring details, see <a href="custom-nodes.html#persistent-state">Custom Action Node Authoring</a>.</p>
+<h3 id="example">Example</h3>
+<pre><code class="language-cpp hl-code"><span class="hl-macro">UCLASS</span>()
+<span class="hl-keyword">class</span> <span class="hl-type">UActionNode_MyWaitLike</span> : <span class="hl-keyword">public</span> <span class="hl-type">UActionNode</span>
+{
+    <span class="hl-macro">GENERATED_BODY</span>()
+
+<span class="hl-keyword">private</span>:
+    <span class="hl-macro">UPROPERTY</span>(Transient, SaveGame)
+    <span class="hl-keyword">float</span> RemainingSeconds = -<span class="hl-number">1.0f</span>;
+
+    <span class="hl-keyword">virtual</span> <span class="hl-keyword">void</span> OnBeforeCapturePersistentState_Implementation() <span class="hl-keyword">override</span>
+    {
+        RemainingSeconds = <span class="hl-comment">/* snapshot runtime remaining time */</span>;
+    }
+
+    <span class="hl-keyword">virtual</span> <span class="hl-keyword">void</span> OnPersistentStateRestored_Implementation() <span class="hl-keyword">override</span>
+    {
+        <span class="hl-comment">// optional fixup after load</span>
+    }
+};</code></pre>
+<h2 id="two-save-approaches">Two save approaches</h2>
+<p>You can use either approach, or both:</p>
+<ul><li>Built-in file save (simple): subsystem writes/reads a dedicated SaveGame slot.</li><li>Custom save system (flexible): subsystem exports/imports persistence data, and your project decides where/how to store it.</li></ul>
+<hr>
+<h2 id="1-built-in-file-persistence-savegame-slot">1) Built-in file persistence (SaveGame slot)</h2>
+<p>Use when you want a ready-to-use file save path without extra infrastructure.</p>
+<h3 id="save-to-file">Save to file</h3>
+<p>Call on subsystem:</p>
+<ul><li><code class="hl-inline">SavePersistedSceneDirectorStatesToSlot(SlotName, UserIndex)</code></li></ul>
+<p>Returns <code class="hl-inline"><span class="hl-keyword">true</span></code> on success.</p>
+<p><img src="assets/images/persist-25.png" alt=""></p>
+<h3 id="load-from-file">Load from file</h3>
+<p>Call on subsystem:</p>
+<ul><li><code class="hl-inline">LoadPersistedSceneDirectorStatesFromSlot(SlotName, UserIndex, bReplaceExisting)</code></li></ul>
+<p>Usually, <code class="hl-inline">bReplaceExisting=<span class="hl-keyword">true</span></code> is the safest default.</p>
+<p>After load, graphs with <strong>Auto Start On State Restore</strong> restart on their own. Others need a manual <strong><code class="hl-inline">Run Scene Director</code></strong> with <strong><code class="hl-inline">Restore From State = <span class="hl-keyword">true</span></code></strong>.</p>
+<p><img src="assets/images/persist-24.png" alt=""></p>
+<h3 id="typical-flow">Typical flow</h3>
+<ol><li>World/game initializes.</li><li>Load Scene Director state from slot.</li><li>Make sure the required actors exist again.</li><li>For graphs without auto-start: call <strong><code class="hl-inline">Run Scene Director</code></strong> with <strong><code class="hl-inline">Restore From State = <span class="hl-keyword">true</span></code></strong>.</li></ol>
+<hr>
+<h2 id="2-custom-save-system-your-own-filesback-end">2) Custom save system (your own files/back-end)</h2>
+<p>Use when you already have project-specific save architecture.</p>
+<h3 id="export-from-subsystem">Export from subsystem</h3>
+<p>Call:</p>
+<ul><li><code class="hl-inline">ExportPersistedSceneDirectorStates(OutRecords)</code></li></ul>
+<p>Then store the exported records in your own save system.</p>
+<p><img src="assets/images/persist-26.png" alt=""></p>
+<h3 id="import-into-subsystem">Import into subsystem</h3>
+<p>Call:</p>
+<ul><li><code class="hl-inline">ImportPersistedSceneDirectorStates(InRecords, bReplaceExisting)</code></li></ul>
+<p>After import:</p>
+<ul><li>graphs with <strong>Auto Start On State Restore</strong> may restart automatically</li><li>otherwise start with <strong><code class="hl-inline">Restore From State = <span class="hl-keyword">true</span></code></strong></li></ul>
+<p><img src="assets/images/persist-27.png" alt=""></p>
+<h3 id="minimal-custom-integration-pattern">Minimal custom integration pattern</h3>
+<ol><li>At save time:</li></ol>
+<p>- call <code class="hl-inline">ExportPersistedSceneDirectorStates</code>. - write the exported data into your own save payload.</p>
+<ol start="2"><li>At load time:</li></ol>
+<p>- read the saved data back from your payload. - call <code class="hl-inline">ImportPersistedSceneDirectorStates</code>. - start graphs (or rely on auto-start) with <strong><code class="hl-inline">Restore From State = <span class="hl-keyword">true</span></code></strong> where needed.</p>
+<h2 id="practical-notes">Practical notes</h2>
+<ul><li>The actors used by the graph should exist again after loading.</li><li>Single Runtime Participant graphs must be started with <strong><code class="hl-inline">Run Scene Director With Single Actor</code></strong> — persistence restore still works, but auto-start cannot do this for you.</li><li>With <strong>Graph Trace</strong> enabled in the Action Graph editor, restore events appear in the Trace tab. See <a href="console-commands.html#5-graph-trace-editor-ui">Console Commands — Graph Trace</a>.</li><li>You can clear stored Scene Director state manually when needed:</li></ul>
+<p>- <code class="hl-inline">ClearSceneDirectorStatesForGraph</code> - <code class="hl-inline">ClearAllSceneDirectorStates</code></p>
+<h2 id="see-also">See also</h2>
+<ul><li><a href="runtime-control.html">Runtime Control</a> — stop APIs and <strong><code class="hl-inline">Restore From State</code></strong> on launch.</li><li><a href="index.html#graph-settings">Basic Usage — Graph settings</a></li></ul>
+      </article>
+    </main>
+  </div>
+</body>
+</html>
